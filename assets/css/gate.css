@@ -1,0 +1,613 @@
+/**
+ * ZASK Age-Gate Frontend Styles
+ * Modal + Fullpage modes
+ * All properties use !important to override any theme
+ */
+
+/* ===== SHARED — Prevent Scrolling ===== */
+body.zask-gate-active {
+    overflow: hidden !important;
+}
+
+/* ===== SHARED — Form Components ===== */
+#zask-gate-modal .zask-form-group,
+#zask-gate-fullpage .zask-form-group {
+    margin-bottom: 18px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+}
+#zask-gate-modal .zask-form-group label,
+#zask-gate-fullpage .zask-form-group label {
+    display: block !important;
+    margin-bottom: 6px !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    font-size: 13px !important;
+    letter-spacing: 0.01em !important;
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    text-transform: none !important;
+    line-height: 1.4 !important;
+}
+#zask-gate-modal .zask-form-group input[type="text"],
+#zask-gate-modal .zask-form-group input[type="email"],
+#zask-gate-modal .zask-form-group input[type="password"],
+#zask-gate-modal .zask-form-group select,
+#zask-gate-fullpage .zask-form-group input[type="text"],
+#zask-gate-fullpage .zask-form-group input[type="email"],
+#zask-gate-fullpage .zask-form-group input[type="password"],
+#zask-gate-fullpage .zask-form-group select {
+    width: 100% !important;
+    padding: 11px 14px !important;
+    border: 1.5px solid #d1d5db !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+    box-sizing: border-box !important;
+    background: #fff !important;
+    color: #111827 !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    font-family: inherit !important;
+}
+#zask-gate-modal .zask-form-group input:focus,
+#zask-gate-modal .zask-form-group select:focus,
+#zask-gate-fullpage .zask-form-group input:focus,
+#zask-gate-fullpage .zask-form-group select:focus {
+    outline: none !important;
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,.12) !important;
+}
+#zask-gate-modal .zask-form-group small,
+#zask-gate-fullpage .zask-form-group small {
+    display: block !important;
+    margin-top: 4px !important;
+    font-size: 12px !important;
+    color: #9ca3af !important;
+}
+
+/* Checkbox */
+#zask-gate-modal .zask-checkbox-label,
+#zask-gate-fullpage .zask-checkbox-label {
+    display: flex !important;
+    align-items: flex-start !important;
+    cursor: pointer !important;
+    gap: 10px !important;
+    font-weight: 400 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+}
+#zask-gate-modal .zask-checkbox-label input[type="checkbox"],
+#zask-gate-fullpage .zask-checkbox-label input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    margin: 2px 0 0 0 !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+    accent-color: #6366f1 !important;
+}
+#zask-gate-modal .zask-checkbox-label span,
+#zask-gate-fullpage .zask-checkbox-label span {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    color: #4b5563 !important;
+    font-weight: 400 !important;
+}
+
+/* Password wrapper */
+#zask-gate-modal .zask-password-wrapper,
+#zask-gate-fullpage .zask-password-wrapper {
+    position: relative !important;
+}
+#zask-gate-modal .zask-password-wrapper input,
+#zask-gate-fullpage .zask-password-wrapper input {
+    padding-right: 44px !important;
+}
+#zask-gate-modal .zask-password-toggle,
+#zask-gate-fullpage .zask-password-toggle {
+    position: absolute !important;
+    right: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    padding: 4px !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    width: auto !important;
+    height: auto !important;
+}
+
+/* Button */
+#zask-gate-modal .zask-btn,
+#zask-gate-fullpage .zask-btn {
+    width: 100% !important;
+    padding: 13px 24px !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s !important;
+    letter-spacing: 0.01em !important;
+    text-transform: none !important;
+    text-decoration: none !important;
+    line-height: 1.4 !important;
+    display: block !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    outline: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+}
+#zask-gate-modal .zask-btn:hover,
+#zask-gate-fullpage .zask-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,.15) !important;
+}
+#zask-gate-modal .zask-btn:active,
+#zask-gate-fullpage .zask-btn:active {
+    transform: translateY(0) !important;
+}
+#zask-gate-modal .zask-btn:disabled,
+#zask-gate-fullpage .zask-btn:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+#zask-gate-modal .zask-btn-primary,
+#zask-gate-fullpage .zask-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #ffffff !important;
+}
+#zask-gate-modal .zask-btn-link,
+#zask-gate-fullpage .zask-btn-link {
+    background: none !important;
+    border: none !important;
+    color: #6366f1 !important;
+    cursor: pointer !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 0 !important;
+    width: auto !important;
+    display: inline !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+}
+#zask-gate-modal .zask-btn-link:hover,
+#zask-gate-fullpage .zask-btn-link:hover {
+    text-decoration: underline !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Toggle switch */
+#zask-gate-modal .zask-toggle-switch,
+#zask-gate-fullpage .zask-toggle-switch {
+    display: flex !important;
+    background: #f3f4f6 !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    position: relative !important;
+    margin-bottom: 24px !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+#zask-gate-modal .zask-toggle-btn,
+#zask-gate-fullpage .zask-toggle-btn {
+    flex: 1 !important;
+    padding: 10px !important;
+    background: none !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #6b7280 !important;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: 2 !important;
+    transition: color 0.2s !important;
+    text-transform: none !important;
+    text-decoration: none !important;
+    letter-spacing: normal !important;
+    line-height: 1.4 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    display: inline-block !important;
+}
+#zask-gate-modal .zask-toggle-btn.active,
+#zask-gate-fullpage .zask-toggle-btn.active {
+    color: #ffffff !important;
+}
+#zask-gate-modal .zask-toggle-slider,
+#zask-gate-fullpage .zask-toggle-slider {
+    position: absolute !important;
+    top: 4px !important;
+    left: 4px !important;
+    width: calc(50% - 4px) !important;
+    height: calc(100% - 8px) !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border-radius: 8px !important;
+    transition: transform 0.3s ease !important;
+    z-index: 1 !important;
+    border: none !important;
+}
+
+/* Auth forms */
+#zask-gate-modal .zask-auth-form,
+#zask-gate-fullpage .zask-auth-form {
+    display: none !important;
+}
+#zask-gate-modal .zask-auth-form.active,
+#zask-gate-fullpage .zask-auth-form.active {
+    display: block !important;
+}
+#zask-gate-modal .zask-form-footer,
+#zask-gate-fullpage .zask-form-footer {
+    text-align: center !important;
+    margin-top: 14px !important;
+    font-size: 13px !important;
+}
+
+/* Messages */
+#zask-gate-modal .zask-gate-messages,
+#zask-gate-fullpage .zask-gate-messages {
+    margin-top: 12px !important;
+}
+#zask-gate-modal .zask-message,
+#zask-gate-fullpage .zask-message {
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    margin-bottom: 8px !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+}
+#zask-gate-modal .zask-message-error,
+#zask-gate-fullpage .zask-message-error {
+    background: #fef2f2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fecaca !important;
+}
+#zask-gate-modal .zask-message-success,
+#zask-gate-fullpage .zask-message-success {
+    background: #f0fdf4 !important;
+    color: #166534 !important;
+    border: 1px solid #bbf7d0 !important;
+}
+
+/* Field error */
+#zask-gate-modal .zask-field-error input,
+#zask-gate-modal .zask-field-error select,
+#zask-gate-fullpage .zask-field-error input,
+#zask-gate-fullpage .zask-field-error select {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 2px rgba(220,38,38,.12) !important;
+}
+#zask-gate-modal .zask-field-error .zask-checkbox-label span,
+#zask-gate-fullpage .zask-field-error .zask-checkbox-label span {
+    color: #dc2626 !important;
+}
+#zask-gate-modal .zask-required,
+#zask-gate-fullpage .zask-required {
+    color: #dc2626 !important;
+    font-weight: bold !important;
+}
+
+/* Password mode notice */
+#zask-gate-modal .zask-pw-mode-notice,
+#zask-gate-fullpage .zask-pw-mode-notice {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 10px 14px !important;
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+    border-radius: 10px !important;
+    color: #1e40af !important;
+    font-size: 12.5px !important;
+    line-height: 1.5 !important;
+    margin-bottom: 18px !important;
+}
+#zask-gate-modal .zask-pw-mode-icon,
+#zask-gate-fullpage .zask-pw-mode-icon {
+    font-size: 18px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Terms preview */
+#zask-gate-modal .zask-terms-preview,
+#zask-gate-fullpage .zask-terms-preview {
+    margin-top: 8px !important;
+    padding: 10px 14px !important;
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    color: #6b7280 !important;
+    max-height: 100px !important;
+    overflow-y: auto !important;
+    line-height: 1.6 !important;
+}
+#zask-gate-modal .zask-terms-preview p,
+#zask-gate-fullpage .zask-terms-preview p {
+    margin: 0 0 6px !important;
+}
+
+/* State notice */
+#zask-gate-modal .zask-state-notice,
+#zask-gate-fullpage .zask-state-notice {
+    padding: 10px 14px !important;
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    border-radius: 8px !important;
+    color: #92400e !important;
+    font-size: 13px !important;
+    margin-bottom: 16px !important;
+}
+
+/* Loading state */
+#zask-gate-modal .zask-loading,
+#zask-gate-fullpage .zask-loading {
+    opacity: 0.65 !important;
+    pointer-events: none !important;
+}
+
+
+/* ===========================================================
+   MODAL MODE
+   =========================================================== */
+#zask-gate-modal.zask-gate-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+#zask-gate-modal .zask-gate-backdrop {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+}
+#zask-gate-modal .zask-gate-container {
+    position: relative !important;
+    background: #ffffff !important;
+    border-radius: 20px !important;
+    max-width: 460px !important;
+    width: 92% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,.08) !important;
+    animation: zaskSlideUp 0.35s ease-out !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+@keyframes zaskSlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Modal header */
+#zask-gate-modal .zask-gate-header {
+    text-align: center !important;
+    padding: 32px 28px 18px !important;
+    margin: 0 !important;
+    background: none !important;
+    border: none !important;
+}
+#zask-gate-modal .zask-gate-logo {
+    max-width: 160px !important;
+    height: auto !important;
+    margin-bottom: 14px !important;
+}
+#zask-gate-modal .zask-gate-icon {
+    font-size: 48px !important;
+    margin-bottom: 10px !important;
+    display: inline-block !important;
+}
+#zask-gate-modal .zask-gate-header h2 {
+    margin: 0 !important;
+    font-size: 21px !important;
+    color: #111827 !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+#zask-gate-modal .zask-gate-subtitle {
+    margin: 6px 0 0 !important;
+    font-size: 13px !important;
+    color: #6b7280 !important;
+    font-weight: 400 !important;
+}
+
+/* Modal body */
+#zask-gate-modal .zask-gate-body {
+    padding: 8px 28px 28px !important;
+}
+#zask-gate-modal .zask-gate-intro {
+    font-size: 13.5px !important;
+    color: #6b7280 !important;
+    margin: 0 0 20px !important;
+    line-height: 1.6 !important;
+}
+#zask-gate-modal .zask-gate-footer {
+    text-align: center !important;
+    font-size: 11.5px !important;
+    color: #9ca3af !important;
+    margin-top: 16px !important;
+    line-height: 1.5 !important;
+}
+
+/* Modal mobile */
+@media (max-width: 480px) {
+    #zask-gate-modal .zask-gate-container {
+        width: 96% !important;
+        border-radius: 16px !important;
+    }
+    #zask-gate-modal .zask-gate-header { padding: 24px 20px 14px !important; }
+    #zask-gate-modal .zask-gate-body { padding: 6px 20px 24px !important; }
+}
+
+
+/* ===========================================================
+   FULLPAGE MODE — Complete page block
+   =========================================================== */
+#zask-gate-fullpage.zask-gate-fullpage {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 999999 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#zask-gate-fullpage .zask-fp-screen {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+    overflow-y: auto !important;
+    padding: 40px 20px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+#zask-gate-fullpage .zask-fp-screen::before {
+    content: '' !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(99,102,241,.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(139,92,246,.06) 0%, transparent 50%) !important;
+    pointer-events: none !important;
+}
+
+#zask-gate-fullpage .zask-fp-card {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 420px !important;
+    background: #ffffff !important;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.05) !important;
+    animation: zaskFadeIn 0.4s ease-out !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+@keyframes zaskFadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+#zask-gate-fullpage .zask-fp-logo {
+    text-align: center !important;
+    padding: 32px 28px 0 !important;
+}
+#zask-gate-fullpage .zask-fp-logo img {
+    max-width: 150px !important;
+    height: auto !important;
+}
+#zask-gate-fullpage .zask-fp-icon {
+    font-size: 44px !important;
+}
+
+#zask-gate-fullpage .zask-fp-header {
+    text-align: center !important;
+    padding: 14px 28px 6px !important;
+}
+#zask-gate-fullpage .zask-fp-header h1 {
+    margin: 0 !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    line-height: 1.3 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+#zask-gate-fullpage .zask-fp-header p {
+    margin: 6px 0 0 !important;
+    font-size: 13px !important;
+    color: #6b7280 !important;
+}
+
+#zask-gate-fullpage .zask-fp-body {
+    padding: 16px 28px 24px !important;
+}
+#zask-gate-fullpage .zask-fp-intro {
+    font-size: 13.5px !important;
+    color: #6b7280 !important;
+    margin: 0 0 20px !important;
+    line-height: 1.6 !important;
+    text-align: center !important;
+}
+#zask-gate-fullpage .zask-fp-footer-text {
+    text-align: center !important;
+    font-size: 11.5px !important;
+    color: #9ca3af !important;
+    margin-top: 16px !important;
+    line-height: 1.5 !important;
+}
+
+#zask-gate-fullpage .zask-fp-bottom {
+    text-align: center !important;
+    padding: 0 28px 20px !important;
+}
+#zask-gate-fullpage .zask-fp-bottom p {
+    margin: 0 !important;
+    font-size: 11px !important;
+    color: #9ca3af !important;
+    letter-spacing: 0.02em !important;
+}
+
+/* Fullpage mobile */
+@media (max-width: 480px) {
+    #zask-gate-fullpage .zask-fp-screen { padding: 24px 14px !important; }
+    #zask-gate-fullpage .zask-fp-card { border-radius: 16px !important; }
+    #zask-gate-fullpage .zask-fp-logo { padding: 24px 20px 0 !important; }
+    #zask-gate-fullpage .zask-fp-header { padding: 10px 20px 4px !important; }
+    #zask-gate-fullpage .zask-fp-body { padding: 12px 20px 20px !important; }
+    #zask-gate-fullpage .zask-fp-bottom { padding: 0 20px 16px !important; }
+    #zask-gate-fullpage .zask-fp-header h1 { font-size: 18px !important; }
+}
