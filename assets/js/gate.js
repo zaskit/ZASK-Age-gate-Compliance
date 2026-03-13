@@ -19,9 +19,6 @@
             $(document).on('submit', '#zask-stage1-form', this.handleStage1Submit);
             $(document).on('submit', '#zask-login-form', this.handleLogin);
             $(document).on('submit', '#zask-register-form', this.handleRegister);
-            $(document).on('click', '#zask-show-reset', this.showResetForm);
-            $(document).on('click', '#zask-back-to-login', this.backToLogin);
-            $(document).on('submit', '#zask-reset-form', this.handlePasswordReset);
             $(document).on('click', '#zask-verify-btn', this.handleVerification);
             $(document).on('click', '#zask-resend-btn', this.resendVerification);
         },
@@ -227,92 +224,6 @@
         resendVerification: function(e) {
             e.preventDefault();
             ZASK_Gate.showSuccess('Verification code resent!');
-        },
-        
-        showResetForm: function(e) {
-            e.preventDefault();
-            $('#zask-login-form').removeClass('active').hide();
-            $('#zask-reset-form').show();
-            $('.zask-auth-toggle').fadeOut();
-        },
-        
-        backToLogin: function(e) {
-            e.preventDefault();
-            $('#zask-reset-form').hide();
-            $('#zask-login-form').addClass('active').fadeIn();
-            $('.zask-auth-toggle').fadeIn();
-            $('#reset-email').val('');
-        },
-        
-        handlePasswordReset: function(e) {
-            e.preventDefault();
-            const $form = $(this);
-            const $button = $form.find('.zask-btn');
-            const originalButtonText = $button.text();
-            const email = $('#reset-email').val();
-            
-            if (!email) {
-                ZASK_Gate.showError('Please enter your email address');
-                return;
-            }
-            
-            $button.prop('disabled', true).text('Sending...');
-            ZASK_Gate.showLoading($form);
-            
-            const safetyTimeout = setTimeout(function() {
-                ZASK_Gate.hideLoading($form);
-                $button.prop('disabled', false).text(originalButtonText);
-                ZASK_Gate.showError('Request timed out. Please try again.');
-            }, 10000);
-            
-            $.ajax({
-                url: zaskGate.ajaxurl,
-                type: 'POST',
-                dataType: 'json',
-                timeout: 9000,
-                data: {
-                    action: 'zask_reset_password',
-                    email: email,
-                    nonce: zaskGate.nonce
-                },
-                success: function(response) {
-                    clearTimeout(safetyTimeout);
-                    ZASK_Gate.hideLoading($form);
-                    $button.prop('disabled', false).text(originalButtonText);
-                    
-                    if (response && response.success) {
-                        ZASK_Gate.showSuccess(response.data.message);
-                        $('#reset-email').val('');
-                        setTimeout(function() {
-                            ZASK_Gate.backToLogin($.Event('click'));
-                        }, 3000);
-                    } else {
-                        const errorMsg = response && response.data && response.data.message 
-                            ? response.data.message 
-                            : 'Failed to send reset link. Please try again.';
-                        ZASK_Gate.showError(errorMsg);
-                    }
-                },
-                error: function(xhr, status) {
-                    clearTimeout(safetyTimeout);
-                    ZASK_Gate.hideLoading($form);
-                    $button.prop('disabled', false).text(originalButtonText);
-                    
-                    let errorMessage = 'Connection error. Please try again.';
-                    if (status === 'timeout') {
-                        errorMessage = 'Request timed out. Please check your connection.';
-                    }
-                    ZASK_Gate.showError(errorMessage);
-                },
-                complete: function() {
-                    setTimeout(function() {
-                        if ($button.prop('disabled')) {
-                            $button.prop('disabled', false).text(originalButtonText);
-                            ZASK_Gate.hideLoading($form);
-                        }
-                    }, 500);
-                }
-            });
         },
         
         showLoading: function($form) {
