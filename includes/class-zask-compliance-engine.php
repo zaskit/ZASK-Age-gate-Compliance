@@ -471,22 +471,22 @@ class ZASK_Compliance_Engine {
             (defined('DOING_CRON') && DOING_CRON) || (defined('XMLRPC_REQUEST') && XMLRPC_REQUEST)) {
             return;
         }
-        
+
         // Plugin must be licensed and enabled
         if (get_option('zask_license_status') !== 'active' || get_option('zask_gate_enabled') != '1') {
             return;
         }
-        
+
         $stage = get_option('zask_gate_stage', 'stage1');
         if ($stage === 'stage0') {
             return;
         }
-        
+
         // Always allow password reset & set password pages
         if ($this->is_password_reset_page()) {
             return;
         }
-        
+
         // Admins and Editors always bypass
         if (is_user_logged_in()) {
             $user = wp_get_current_user();
@@ -495,14 +495,17 @@ class ZASK_Compliance_Engine {
                 return;
             }
         }
-        
+
         // Already verified? Let them through
         if ($this->is_user_verified()) {
             return;
         }
-        
+
         // ---- USER IS NOT VERIFIED — GATE MUST SHOW ----
-        
+
+        // Prevent page caching when gate is active (LiteSpeed, WP Super Cache, W3TC, etc.)
+        $this->send_nocache_headers();
+
         // For Stage 2/3 only: logged-in but not verified users get redirected
         // to home page where the gate overlay will show.
         // Stage 1 doesn't need this — it's cookie-based and the overlay handles it.
@@ -512,7 +515,7 @@ class ZASK_Compliance_Engine {
                 exit;
             }
         }
-        
+
         // NOT logged in — gate renders as overlay on every page via wp_footer.
         // Nothing else to do here; render_gate_modal() handles it.
     }
@@ -571,6 +574,13 @@ class ZASK_Compliance_Engine {
             return $location;
         }
         
+        // Prevent redirect loops: if we are already on the home page, allow the redirect through
+        $request_uri = rtrim($_SERVER['REQUEST_URI'] ?? '', '/');
+        $home_path = rtrim(parse_url(home_url('/'), PHP_URL_PATH) ?: '/', '/');
+        if ($request_uri === $home_path || $request_uri === '') {
+            return $location;
+        }
+
         // Block all other redirects — force to home where gate will show
         return home_url('/');
     }
@@ -653,6 +663,32 @@ class ZASK_Compliance_Engine {
         return $uri === '' || $uri === '/' . ltrim(parse_url(home_url(), PHP_URL_PATH) ?: '', '/');
     }
     
+    /**
+     * Send no-cache headers and set DONOTCACHEPAGE constant.
+     * Prevents server/plugin caching from caching gate pages or redirect responses,
+     * which causes redirect loops on hosts like Hostinger (LiteSpeed), WP Engine, etc.
+     */
+    private function send_nocache_headers() {
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        if (!defined('DONOTCACHEOBJECT')) {
+            define('DONOTCACHEOBJECT', true);
+        }
+        if (!defined('DONOTCACHEDB')) {
+            define('DONOTCACHEDB', true);
+        }
+
+        // LiteSpeed Cache specific
+        do_action('litespeed_control_set_nocache', 'zask age gate active');
+
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+            header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+        }
+    }
+
     /**
      * Add body class for gate
      */
