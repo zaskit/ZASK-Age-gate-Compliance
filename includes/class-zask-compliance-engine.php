@@ -1461,7 +1461,7 @@ class ZASK_Compliance_Engine {
         $site_url = home_url();
         
         // Call license server API
-        $api_url = 'https://zask.it/wp-json/zask-license/v1/activate';
+        $api_url = ZASK_License::LICENSE_SERVER . 'activate';
         
         $response = wp_remote_post($api_url, array(
             'timeout' => 15,
