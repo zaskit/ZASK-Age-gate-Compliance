@@ -788,9 +788,12 @@ class ZASK_Compliance_Engine {
             wp_send_json_error(array('message' => $user->get_error_message()));
         }
         
+        // Ensure user has a compliance record (pre-existing users registered before plugin activation won't have one)
+        $this->ensure_compliance_record($user->ID);
+
         wp_set_current_user($user->ID);
         wp_set_auth_cookie($user->ID, false, is_ssl());
-        
+
         wp_send_json_success(array(
             'message' => __('Login successful!', 'zask-age-gate'),
             'redirect' => home_url()
@@ -829,8 +832,13 @@ class ZASK_Compliance_Engine {
             $password = wp_generate_password(16, true, false);
         }
         
-        // Generate username from email: abc@gmail.com → abc.gmail
-        $username = $this->generate_username_from_email($email);
+        // Check if email already exists
+        if (email_exists($email)) {
+            wp_send_json_error(array('message' => __('An account with this email address already exists. Please log in instead.', 'zask-age-gate')));
+        }
+
+        // Generate unique username from full name: John Doe → john.doe.4829
+        $username = $this->generate_unique_username($full_name);
         
         // Create user with the generated username (not the email)
         $user_id = wp_create_user($username, $password, $email);
@@ -1261,27 +1269,27 @@ class ZASK_Compliance_Engine {
     }
     
     /**
-     * Generate a unique username from an email address.
-     * abc@gmail.com → abc.gmail
-     * If taken, appends a number: abc.gmail2, abc.gmail3, etc.
+     * Generate a unique username from the user's full name.
+     * John Doe → john.doe.4829
+     * If taken, regenerates with a new random number.
      */
-    private function generate_username_from_email($email) {
-        $parts = explode('@', $email);
-        $local = $parts[0]; // abc
-        $domain_parts = explode('.', $parts[1] ?? '');
-        $domain = $domain_parts[0] ?? ''; // gmail
-        
-        $base = sanitize_user($local . '.' . $domain, true);
-        $base = strtolower($base);
-        
-        // Ensure uniqueness
-        $username = $base;
-        $suffix = 2;
-        while (username_exists($username)) {
-            $username = $base . $suffix;
-            $suffix++;
+    private function generate_unique_username($full_name) {
+        // Clean and build base from full name: "John Doe" → "john.doe"
+        $name = strtolower(trim($full_name));
+        $name = preg_replace('/\s+/', '.', $name); // spaces to dots
+        $base = sanitize_user($name, true);
+
+        // Fallback if name sanitizes to empty
+        if (empty($base)) {
+            $base = 'user';
         }
-        
+
+        // Append random number and ensure uniqueness
+        $username = $base . '.' . wp_rand(1000, 9999);
+        while (username_exists($username)) {
+            $username = $base . '.' . wp_rand(1000, 9999);
+        }
+
         return $username;
     }
     
@@ -1335,6 +1343,35 @@ class ZASK_Compliance_Engine {
         $wpdb->insert($table_name, $data);
     }
     
+    /**
+     * Ensure a user has a compliance record.
+     * Pre-existing users (registered before plugin activation) won't have one.
+     * Logging in through the gate counts as age verification.
+     */
+    private function ensure_compliance_record($user_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'zask_compliance_records';
+
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name WHERE user_id = %d AND age_verified = 1",
+            $user_id
+        ));
+
+        if ($existing) {
+            return;
+        }
+
+        $user = get_userdata($user_id);
+        $this->log_verification(array(
+            'user_id' => $user_id,
+            'full_name' => $user->display_name,
+            'email' => $user->user_email,
+            'age_verified' => 1,
+            'terms_agreed' => 1,
+            'professional_verified' => 0,
+        ));
+    }
+
     /**
      * Send verification email
      */
