@@ -42,6 +42,7 @@ class ZASK_Compliance_Engine {
         add_action('wp_enqueue_scripts', array($instance, 'frontend_enqueue_scripts'), 9999);
         add_action('wp_footer', array($instance, 'render_gate_modal'), 1);
         add_action('template_redirect', array($instance, 'check_gate_access'), 1);
+        add_action('template_redirect', array($instance, 'strip_cache_buster'), 0);
         add_filter('body_class', array($instance, 'add_gate_body_class'));
         
         // Block other plugins/WooCommerce from redirecting when gate should show
@@ -435,6 +436,20 @@ class ZASK_Compliance_Engine {
         return false;
     }
     
+    /**
+     * Strip the zask_v cache-buster param from the URL via redirect.
+     * Keeps URLs clean after the gate is passed.
+     */
+    public function strip_cache_buster() {
+        if (isset($_GET['zask_v']) && !is_admin() && !wp_doing_ajax()) {
+            $clean_url = remove_query_arg('zask_v');
+            if ($clean_url !== $_SERVER['REQUEST_URI']) {
+                wp_safe_redirect($clean_url, 302);
+                exit;
+            }
+        }
+    }
+
     /**
      * AGGRESSIVE GATE ENFORCEMENT
      * Runs at template_redirect priority 1 — before WooCommerce, before any other plugin.

@@ -3,7 +3,7 @@
  * Plugin Name: ZASK Age-Gate & Compliance System
  * Plugin URI: https://zask.it/age-gate
  * Description: Advanced age verification and compliance system with geographic restrictions, FDA monitoring, and professional verification for WooCommerce stores selling research chemicals and high-risk products
- * Version: 2.1.0
+ * Version: 2.1.1
  * Requires at least: 6.0.0
  * Requires PHP: 7.4
  * Author: ZASK Digital Solutions
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('ZASK_AGEGATE_VERSION', '2.1.0');
+define('ZASK_AGEGATE_VERSION', '2.1.1');
 define('ZASK_AGEGATE_DIR', plugin_dir_path(__FILE__));
 define('ZASK_AGEGATE_URL', plugin_dir_url(__FILE__));
 define('ZASK_AGEGATE_BASENAME', plugin_basename(__FILE__));

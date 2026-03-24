@@ -2,9 +2,16 @@
 
 Advanced age verification and compliance system for WordPress/WooCommerce websites selling research chemicals and high-risk products.
 
-## Version 2.1.0
+## Version 2.1.1
 
 ## Changelog
+
+### 2.1.1 (2026-03-24)
+- **Fix**: Safari private mode and Chrome incognito cookie compatibility — removed `SameSite` attribute from JS cookie (Safari silently drops cookies with SameSite set via document.cookie)
+- **Fix**: Use `location.href` with cache-buster instead of `location.reload()` — prevents cached gate page from being served
+- **New**: Triple verification storage — cookie + localStorage + sessionStorage ensures at least one persists in strict browser modes
+- **New**: Auto-recovery on page load — if localStorage/sessionStorage has verification but cookie was lost, re-sets cookie and hides gate
+- **Fix**: Cache-buster param (`zask_v`) auto-stripped from URL via server redirect after gate is passed
 
 ### 2.1.0 (2026-03-24)
 - **Fix**: Cookie domain compatibility — removed `COOKIE_DOMAIN` dependency, uses empty domain for maximum hosting compatibility (fixes gate reappearing on client sites)
