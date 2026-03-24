@@ -423,31 +423,8 @@ class ZASK_Compliance_Engine {
         }
         
         if ($stage === 'stage2' || $stage === 'stage3') {
-            // Check if user is logged in and has compliance record
-            if (!is_user_logged_in()) {
-                return false;
-            }
-            
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'zask_compliance_records';
-            $user_id = get_current_user_id();
-            
-            // Only require age_verified — terms_agreed is optional depending on settings
-            $record = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM $table_name WHERE user_id = %d AND age_verified = 1",
-                $user_id
-            ));
-            
-            if (!$record) {
-                return false;
-            }
-            
-            if ($stage === 'stage3') {
-                // Stage 3 also requires professional verification
-                return $record->professional_verified == 1;
-            }
-            
-            return true;
+            // Cookie-based verification (same as stage1)
+            return isset($_COOKIE['zask_age_verified']) && $_COOKIE['zask_age_verified'] === 'yes';
         }
         
         return false;
