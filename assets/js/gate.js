@@ -19,6 +19,9 @@
             $(document).on('submit', '#zask-stage1-form', this.handleStage1Submit);
             $(document).on('submit', '#zask-login-form', this.handleLogin);
             $(document).on('submit', '#zask-register-form', this.handleRegister);
+            $(document).on('submit', '#zask-forgot-form', this.handleForgotPassword);
+            $(document).on('click', '.zask-forgot-password-link', this.showForgotForm);
+            $(document).on('click', '.zask-back-to-login', this.showLoginForm);
             $(document).on('click', '#zask-verify-btn', this.handleVerification);
             $(document).on('click', '#zask-resend-btn', this.resendVerification);
         },
@@ -96,6 +99,9 @@
             
             $.post(zaskGate.ajaxurl, data, function(response) {
                 if (response.success) {
+                    // Fallback: also set cookie from JS in case server setcookie() failed
+                    // (COOKIE_DOMAIN mismatch, reverse proxy stripping Set-Cookie, etc.)
+                    ZASK_Gate.setFallbackCookie();
                     // Redirect — cookie is now set, page will load without gate
                     window.location.reload();
                 } else {
@@ -127,7 +133,7 @@
             
             $.post(zaskGate.ajaxurl, data, function(response) {
                 if (response.success) {
-                    // User is logged in — reload page, gate won't show
+                    ZASK_Gate.setFallbackCookie();
                     window.location.reload();
                 } else {
                     ZASK_Gate.showError(response.data.message);
@@ -138,7 +144,7 @@
                 ZASK_Gate.hideLoading($form);
             });
         },
-        
+
         /**
          * Stage 2/3: Registration (all password modes)
          * On success: redirect (user is logged in server-side)
@@ -204,7 +210,7 @@
                         $('#zask-verification-form').show();
                         ZASK_Gate.showSuccess(response.data.message);
                     } else {
-                        // User is logged in — reload page, gate won't show
+                        ZASK_Gate.setFallbackCookie();
                         window.location.reload();
                     }
                 } else {
@@ -216,6 +222,48 @@
             });
         },
         
+        showForgotForm: function(e) {
+            e.preventDefault();
+            $('.zask-auth-form, .zask-auth-toggle').hide();
+            $('#zask-forgot-form').show();
+        },
+
+        showLoginForm: function(e) {
+            e.preventDefault();
+            $('#zask-forgot-form').hide();
+            $('.zask-auth-toggle').show();
+            $('#zask-login-form').addClass('active').show();
+        },
+
+        handleForgotPassword: function(e) {
+            e.preventDefault();
+            var $form = $(this);
+            var email = $form.find('[name="email"]').val();
+
+            if (!email) {
+                ZASK_Gate.showError('Please enter your email address.');
+                return;
+            }
+
+            ZASK_Gate.showLoading($form);
+
+            $.post(zaskGate.ajaxurl, {
+                action: 'zask_reset_password',
+                nonce: zaskGate.nonce,
+                email: email
+            }, function(response) {
+                ZASK_Gate.hideLoading($form);
+                if (response.success) {
+                    ZASK_Gate.showSuccess(response.data.message);
+                } else {
+                    ZASK_Gate.showError(response.data.message);
+                }
+            }).fail(function() {
+                ZASK_Gate.hideLoading($form);
+                ZASK_Gate.showError('Connection error. Please try again.');
+            });
+        },
+
         handleVerification: function(e) {
             e.preventDefault();
             window.location.reload();
@@ -256,6 +304,23 @@
             });
         },
         
+        /**
+         * Fallback: set the verification cookie from JS.
+         * Covers hosting environments where the server-side Set-Cookie header
+         * is stripped or the domain doesn't match (reverse proxy, CDN, www mismatch).
+         */
+        setFallbackCookie: function() {
+            var duration = parseInt(zaskGate.session_duration || '120', 10);
+            var expires = '';
+            if (duration > 0) {
+                var d = new Date();
+                d.setTime(d.getTime() + duration * 60 * 1000);
+                expires = '; expires=' + d.toUTCString();
+            }
+            var secure = location.protocol === 'https:' ? '; Secure' : '';
+            document.cookie = 'zask_age_verified=yes; path=/' + expires + '; SameSite=Lax' + secure;
+        },
+
         checkGateStatus: function() {
             if ($('body').hasClass('zask-gate-active')) {
                 $('body').css('overflow', 'hidden');

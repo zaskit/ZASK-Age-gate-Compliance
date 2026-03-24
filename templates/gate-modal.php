@@ -124,9 +124,22 @@ $state_message = ZASK_Geo_Compliance::get_state_message();
                     </button>
                     
                     <p class="zask-form-footer">
-                        <a href="<?php echo esc_url(function_exists('wc_lostpassword_url') ? wc_lostpassword_url() : wp_lostpassword_url()); ?>" class="zask-btn-link">
+                        <a href="#" class="zask-btn-link zask-forgot-password-link">
                             <?php _e('Forgot Password?', 'zask-age-gate'); ?>
                         </a>
+                    </p>
+                </form>
+
+                <!-- Forgot Password Form (inline, stays in the gate) -->
+                <form id="zask-forgot-form" class="zask-gate-form" style="display:none;">
+                    <p class="zask-gate-intro"><?php _e('Enter your email address and we\'ll send you a password reset link.', 'zask-age-gate'); ?></p>
+                    <div class="zask-form-group">
+                        <label for="forgot-email"><?php _e('Email Address', 'zask-age-gate'); ?></label>
+                        <input type="email" id="forgot-email" name="email" required placeholder="<?php esc_attr_e('your@email.com', 'zask-age-gate'); ?>">
+                    </div>
+                    <button type="submit" class="zask-btn zask-btn-primary"><?php _e('Send Reset Link', 'zask-age-gate'); ?></button>
+                    <p class="zask-form-footer">
+                        <a href="#" class="zask-btn-link zask-back-to-login"><?php _e('Back to Login', 'zask-age-gate'); ?></a>
                     </p>
                 </form>
                 

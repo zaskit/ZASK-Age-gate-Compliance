@@ -2,7 +2,30 @@
 
 Advanced age verification and compliance system for WordPress/WooCommerce websites selling research chemicals and high-risk products.
 
-## Version 1.0.0
+## Version 2.1.0
+
+## Changelog
+
+### 2.1.0 (2026-03-24)
+- **Fix**: Cookie domain compatibility — removed `COOKIE_DOMAIN` dependency, uses empty domain for maximum hosting compatibility (fixes gate reappearing on client sites)
+- **Fix**: JS fallback cookie — browser sets verification cookie as backup when server `Set-Cookie` header is stripped by CDN/proxy/reverse proxy
+- **Fix**: Login and registration now set verification cookie in all flows (was missing, causing gate to reappear)
+- **Fix**: Logged-in users (via WP admin/WooCommerce) auto-verified for Stage 2/3 — prevents redirect loop
+- **Fix**: Forgot Password is now inline AJAX form inside the gate (no longer links to external WooCommerce/WordPress page that may not exist)
+- **Fix**: Replaced `session_id()` with own cookie-based session tracking (PHP sessions disabled on many hosts)
+- **Fix**: Real client IP detection via Cloudflare (`CF-Connecting-IP`), `X-Forwarded-For`, `X-Real-IP`
+- **Fix**: Removed all 13 `error_log()` calls from production code — replaced with debug logger
+- **New**: Debug logging system — toggle in admin settings (Session Management tab), writes to `wp-content/zask-age-gate-debug.log`
+- **New**: Debug logs cookie set/check events, verification results, email status for troubleshooting on client sites
+
+### 2.0.1 (2026-03-24)
+- Fix stage2 verification to use cookie instead of DB compliance record
+- Fix redirect loop on cached/high-traffic hosts (Hostinger, LiteSpeed)
+- Fix registration username collision and pre-existing user login
+- Replace inline password reset with WooCommerce native lost password page
+
+### 2.0.0 (2026-03-13)
+- Initial release: 4-stage gate system, FDA monitoring, geo compliance, license system
 
 ## Features
 

@@ -212,7 +212,7 @@ class ZASK_Compliance_Engine {
         
         // Log any errors for debugging
         if (!empty($wpdb->last_error)) {
-            error_log('ZASK Age-Gate: DB error during table creation – ' . $wpdb->last_error);
+            self::get_instance()->debug_log('DB error during table creation: ' . $wpdb->last_error);
         }
     }
     
@@ -356,6 +356,7 @@ class ZASK_Compliance_Engine {
             'stage' => get_option('zask_gate_stage', 'stage1'),
             'display_mode' => get_option('zask_gate_display_mode', 'modal'),
             'minimum_age' => get_option('zask_minimum_age', '21'),
+            'session_duration' => get_option('zask_session_duration', '120'),
             'custom_fields' => $this->get_enabled_custom_fields(),
             'custom_checkboxes' => $this->get_enabled_custom_checkboxes(),
             'strings' => array(
@@ -416,17 +417,21 @@ class ZASK_Compliance_Engine {
      */
     private function is_user_verified() {
         $stage = get_option('zask_gate_stage', 'stage1');
-        
-        if ($stage === 'stage1') {
-            // Check session cookie
-            return isset($_COOKIE['zask_age_verified']) && $_COOKIE['zask_age_verified'] === 'yes';
+        $has_cookie = isset($_COOKIE['zask_age_verified']) && $_COOKIE['zask_age_verified'] === 'yes';
+
+        if ($stage === 'stage1' || $stage === 'stage2' || $stage === 'stage3') {
+            if (!$has_cookie) {
+                $this->debug_log(sprintf(
+                    'is_user_verified=NO | stage=%s | cookie_exists=%s | cookie_value=%s | URI=%s',
+                    $stage,
+                    isset($_COOKIE['zask_age_verified']) ? 'yes' : 'no',
+                    $_COOKIE['zask_age_verified'] ?? '(not set)',
+                    $_SERVER['REQUEST_URI'] ?? ''
+                ));
+            }
+            return $has_cookie;
         }
-        
-        if ($stage === 'stage2' || $stage === 'stage3') {
-            // Cookie-based verification (same as stage1)
-            return isset($_COOKIE['zask_age_verified']) && $_COOKIE['zask_age_verified'] === 'yes';
-        }
-        
+
         return false;
     }
     
@@ -478,20 +483,21 @@ class ZASK_Compliance_Engine {
             return;
         }
 
+        // Stage 2/3: If user is logged in (e.g. via WP admin or WooCommerce),
+        // they've already authenticated — auto-set the verification cookie so
+        // the gate doesn't block them. This prevents redirect loops for users
+        // who log in through native WordPress/WooCommerce login forms.
+        if (($stage === 'stage2' || $stage === 'stage3') && is_user_logged_in()) {
+            $this->set_verification_cookie();
+            $this->ensure_compliance_record(get_current_user_id());
+            $this->debug_log('Auto-verified logged-in user #' . get_current_user_id());
+            return;
+        }
+
         // ---- USER IS NOT VERIFIED — GATE MUST SHOW ----
 
         // Prevent page caching when gate is active (LiteSpeed, WP Super Cache, W3TC, etc.)
         $this->send_nocache_headers();
-
-        // For Stage 2/3 only: logged-in but not verified users get redirected
-        // to home page where the gate overlay will show.
-        // Stage 1 doesn't need this — it's cookie-based and the overlay handles it.
-        if (($stage === 'stage2' || $stage === 'stage3') && is_user_logged_in()) {
-            if (!$this->is_home_or_front()) {
-                wp_safe_redirect(home_url('/'));
-                exit;
-            }
-        }
 
         // NOT logged in — gate renders as overlay on every page via wp_footer.
         // Nothing else to do here; render_gate_modal() handles it.
@@ -701,40 +707,25 @@ class ZASK_Compliance_Engine {
      */
     public function ajax_verify_age() {
         check_ajax_referer('zask_gate_nonce', 'nonce');
-        
+
         $age_confirmed = isset($_POST['age_confirmed']) && $_POST['age_confirmed'] === 'true';
         $terms_agreed = isset($_POST['terms_agreed']) && $_POST['terms_agreed'] === 'true';
         $require_terms = get_option('zask_require_terms') == '1';
-        
+
         if (!$age_confirmed) {
             wp_send_json_error(array('message' => __('You must confirm your age.', 'zask-age-gate')));
         }
-        
+
         if ($require_terms && !$terms_agreed) {
             wp_send_json_error(array('message' => __('You must agree to the terms and conditions.', 'zask-age-gate')));
         }
-        
+
         // Collect custom checkbox values
         $custom_data = $this->collect_custom_post_data();
-        
-        // Set verification cookie — use '/' path to ensure it works site-wide
-        // (COOKIEPATH can cause issues when cookie is set via admin-ajax.php)
-        $duration = $this->get_session_duration();
-        $expiry = $duration > 0 ? time() + $duration : 0;
-        
-        $cookie_options = array(
-            'expires'  => $expiry,
-            'path'     => '/',
-            'domain'   => COOKIE_DOMAIN ?: '',
-            'secure'   => is_ssl(),
-            'httponly'  => true,
-            'samesite'  => 'Lax',
-        );
-        setcookie('zask_age_verified', 'yes', $cookie_options);
-        
-        // Also set it in $_COOKIE so is_user_verified() works on the same request
-        $_COOKIE['zask_age_verified'] = 'yes';
-        
+
+        // Set verification cookie
+        $this->set_verification_cookie();
+
         // Log the verification
         $log = array(
             'type' => 'stage1',
@@ -745,10 +736,13 @@ class ZASK_Compliance_Engine {
             $log['custom_data'] = wp_json_encode($custom_data);
         }
         $this->log_verification($log);
-        
+
+        $this->debug_log('Age verification successful via AJAX');
+
         wp_send_json_success(array(
             'message' => __('Age verified successfully!', 'zask-age-gate'),
-            'redirect' => home_url()
+            'redirect' => home_url(),
+            'set_cookie' => true,
         ));
     }
     
@@ -766,14 +760,73 @@ class ZASK_Compliance_Engine {
         $minutes = get_option('zask_session_duration', '120');
         return intval($minutes) * MINUTE_IN_SECONDS;
     }
-    
+
+    /**
+     * Set the verification cookie with maximum compatibility.
+     *
+     * Key decisions:
+     *  - 'domain' is ALWAYS empty string so the browser defaults to the exact
+     *    host the page was loaded from. COOKIE_DOMAIN can be wrong on many hosts
+     *    (www vs non-www, subdomain mismatch, multisite). Empty string = safest.
+     *  - 'path' is '/' so the cookie is available on every URL path.
+     *  - 'httponly' is false so the JS fallback in gate.js can also set it as backup.
+     *  - 'samesite' is 'Lax' (sufficient for same-origin admin-ajax.php POST).
+     *  - 'secure' matches whatever the site uses (http vs https).
+     */
+    private function set_verification_cookie() {
+        $duration = $this->get_session_duration();
+        $expiry   = $duration > 0 ? time() + $duration : 0;
+
+        $cookie_options = array(
+            'expires'  => $expiry,
+            'path'     => '/',
+            'domain'   => '',          // empty = browser uses current host (most compatible)
+            'secure'   => is_ssl(),
+            'httponly'  => false,       // allow JS fallback to read/set
+            'samesite'  => 'Lax',
+        );
+
+        setcookie('zask_age_verified', 'yes', $cookie_options);
+
+        // Also set in super-global so is_user_verified() works on this same request
+        $_COOKIE['zask_age_verified'] = 'yes';
+
+        $this->debug_log(sprintf(
+            'Cookie set: expires=%s, secure=%s, host=%s',
+            $expiry ? date('Y-m-d H:i:s', $expiry) : 'session',
+            is_ssl() ? 'true' : 'false',
+            $_SERVER['HTTP_HOST'] ?? 'unknown'
+        ));
+    }
+
     /**
      * Handle logout - Clear age verification cookie only
      */
     public function handle_logout() {
-        // Clear age verification cookie only
-        // Does NOT affect WordPress admin login
-        setcookie('zask_age_verified', '', time() - 3600, '/', COOKIE_DOMAIN ?: '', is_ssl(), true);
+        // Clear with empty domain (matching set_verification_cookie)
+        setcookie('zask_age_verified', '', time() - 3600, '/', '', is_ssl(), false);
+    }
+
+    /**
+     * Debug logger — writes to wp-content/zask-age-gate-debug.log when
+     * WP_DEBUG is true OR the 'zask_agegate_debug' option is '1'.
+     * Enable from WP admin: Settings → Age Gate → enable debug,
+     * or add to wp-config.php:  define('WP_DEBUG', true);
+     */
+    private function debug_log($message) {
+        $debug_enabled = (defined('WP_DEBUG') && WP_DEBUG) || get_option('zask_agegate_debug', '0') === '1';
+        if (!$debug_enabled) {
+            return;
+        }
+        $log_file = WP_CONTENT_DIR . '/zask-age-gate-debug.log';
+        $timestamp = current_time('Y-m-d H:i:s');
+        $entry = "[{$timestamp}] {$message}" . PHP_EOL;
+        // Keep log file under 1 MB
+        if (file_exists($log_file) && filesize($log_file) > 1048576) {
+            file_put_contents($log_file, $entry);
+        } else {
+            file_put_contents($log_file, $entry, FILE_APPEND);
+        }
     }
     
     /**
@@ -807,9 +860,14 @@ class ZASK_Compliance_Engine {
         wp_set_current_user($user->ID);
         wp_set_auth_cookie($user->ID, false, is_ssl());
 
+        // Set verification cookie so gate doesn't reappear
+        $this->set_verification_cookie();
+        $this->debug_log('Login successful, verification cookie set for user: ' . $user->user_email);
+
         wp_send_json_success(array(
             'message' => __('Login successful!', 'zask-age-gate'),
-            'redirect' => home_url()
+            'redirect' => home_url(),
+            'set_cookie' => true,
         ));
     }
     
@@ -903,13 +961,14 @@ class ZASK_Compliance_Engine {
             // Log user in immediately so they can shop
             wp_set_current_user($user_id);
             wp_set_auth_cookie($user_id, false, is_ssl());
-            
-            wp_send_json_success(array('message' => __('Registration successful!', 'zask-age-gate'), 'redirect' => home_url()));
-            
+            $this->set_verification_cookie();
+
+            wp_send_json_success(array('message' => __('Registration successful!', 'zask-age-gate'), 'redirect' => home_url(), 'set_cookie' => true));
+
         } elseif ($pw_mode === 'temp_password') {
             // Send email with the temporary password
             $this->send_temp_password_email($user_id, $email, $full_name, $password, $username);
-            
+
             // Send verification email if required
             if (get_option('zask_require_email_verification') == '1') {
                 $this->send_verification_email($email);
@@ -918,17 +977,18 @@ class ZASK_Compliance_Engine {
                     'requires_verification' => true
                 ));
             }
-            
+
             // Log user in immediately so they can shop
             wp_set_current_user($user_id);
             wp_set_auth_cookie($user_id, false, is_ssl());
-            
-            wp_send_json_success(array('message' => __('Registration successful!', 'zask-age-gate'), 'redirect' => home_url()));
-            
+            $this->set_verification_cookie();
+
+            wp_send_json_success(array('message' => __('Registration successful!', 'zask-age-gate'), 'redirect' => home_url(), 'set_cookie' => true));
+
         } else {
             // user_set mode — original behaviour
             $this->send_registration_email($user_id, $email, $full_name, $password, $username);
-            
+
             // Send verification email if required
             if (get_option('zask_require_email_verification') == '1') {
                 $this->send_verification_email($email);
@@ -937,12 +997,13 @@ class ZASK_Compliance_Engine {
                     'requires_verification' => true
                 ));
             }
-            
+
             // Log user in
             wp_set_current_user($user_id);
             wp_set_auth_cookie($user_id, false, is_ssl());
-            
-            wp_send_json_success(array('message' => __('Registration successful!', 'zask-age-gate'), 'redirect' => home_url()));
+            $this->set_verification_cookie();
+
+            wp_send_json_success(array('message' => __('Registration successful!', 'zask-age-gate'), 'redirect' => home_url(), 'set_cookie' => true));
         }
     }
     
@@ -950,85 +1011,55 @@ class ZASK_Compliance_Engine {
      * AJAX: Password Reset
      */
     public function ajax_reset_password() {
-        error_log('ZASK: Password reset request started');
-        
         check_ajax_referer('zask_gate_nonce', 'nonce');
-        
+
         $email = sanitize_email($_POST['email'] ?? '');
-        
-        if (empty($email)) {
-            error_log('ZASK: Empty email provided');
-            wp_send_json_error(array('message' => __('Please enter your email address', 'zask-age-gate')));
-            exit;
-        }
-        
-        if (!is_email($email)) {
-            error_log('ZASK: Invalid email format: ' . $email);
+
+        if (empty($email) || !is_email($email)) {
             wp_send_json_error(array('message' => __('Please enter a valid email address', 'zask-age-gate')));
-            exit;
         }
-        
-        // Check if user exists
+
         $user = get_user_by('email', $email);
-        
+
         if (!$user) {
-            error_log('ZASK: User not found for email: ' . $email);
+            $this->debug_log('Password reset: no user for ' . $email);
             // Don't reveal if user exists or not for security
             wp_send_json_success(array(
                 'message' => __('If an account exists with this email, you will receive a password reset link shortly.', 'zask-age-gate')
             ));
-            exit;
         }
-        
-        error_log('ZASK: User found, generating reset key for: ' . $email);
-        
-        // Use WordPress native password reset
+
         $reset_key = get_password_reset_key($user);
-        
+
         if (is_wp_error($reset_key)) {
-            error_log('ZASK Password Reset Error: ' . $reset_key->get_error_message());
+            $this->debug_log('Password reset key error: ' . $reset_key->get_error_message());
             wp_send_json_error(array('message' => __('Unable to send reset link. Please try again later.', 'zask-age-gate')));
-            exit;
         }
-        
-        error_log('ZASK: Reset key generated successfully');
-        
-        // Send email - try multiple methods
+
+        // Send email — try WooCommerce first, then WordPress native
         $email_sent = false;
-        
-        // Method 1: Try WooCommerce
-        if (class_exists('WC_Emails')) {
+
+        if (class_exists('WC_Emails') && function_exists('WC')) {
             try {
                 $wc_emails = WC()->mailer()->get_emails();
                 if (isset($wc_emails['WC_Email_Customer_Reset_Password'])) {
                     $wc_emails['WC_Email_Customer_Reset_Password']->trigger($user->user_login, $reset_key);
                     $email_sent = true;
-                    error_log('ZASK: Password reset sent via WooCommerce to ' . $email);
+                    $this->debug_log('Password reset sent via WooCommerce to ' . $email);
                 }
             } catch (Exception $e) {
-                error_log('ZASK WooCommerce Email Error: ' . $e->getMessage());
+                $this->debug_log('WooCommerce email error: ' . $e->getMessage());
             }
         }
-        
-        // Method 2: WordPress native if WC failed
+
         if (!$email_sent) {
-            error_log('ZASK: Attempting WordPress native email');
             $result = $this->send_password_reset_email($user, $reset_key);
-            if ($result) {
-                $email_sent = true;
-                error_log('ZASK: Password reset sent via WordPress to ' . $email);
-            } else {
-                error_log('ZASK: WordPress email failed for ' . $email);
-            }
+            $this->debug_log('Password reset via wp_mail to ' . $email . ': ' . ($result ? 'OK' : 'FAILED'));
         }
-        
-        error_log('ZASK: Sending success response to frontend');
-        
-        // Always return success (for security)
+
         wp_send_json_success(array(
             'message' => __('Password reset link sent! Please check your email.', 'zask-age-gate')
         ));
-        exit;
     }
     
     /**
@@ -1086,11 +1117,7 @@ class ZASK_Compliance_Engine {
         // Send email and log result
         $result = wp_mail($email, $subject, $message, $headers);
         
-        if ($result) {
-            error_log('ZASK: Registration email sent to ' . $email);
-        } else {
-            error_log('ZASK: Registration email FAILED for ' . $email);
-        }
+        $this->debug_log('Registration email to ' . $email . ': ' . ($result ? 'OK' : 'FAILED'));
         
         return $result;
     }
@@ -1113,7 +1140,7 @@ class ZASK_Compliance_Engine {
         $key = get_password_reset_key($user);
         
         if (is_wp_error($key)) {
-            error_log('ZASK: Failed to generate password reset key for ' . $email);
+            $this->debug_log('Failed to generate password reset key for ' . $email);
             return false;
         }
         
@@ -1138,11 +1165,7 @@ class ZASK_Compliance_Engine {
         
         $result = wp_mail($email, $subject, $message, $headers);
         
-        if ($result) {
-            error_log('ZASK: Set-password email sent to ' . $email);
-        } else {
-            error_log('ZASK: Set-password email FAILED for ' . $email);
-        }
+        $this->debug_log('Set-password email to ' . $email . ': ' . ($result ? 'OK' : 'FAILED'));
         
         return $result;
     }
@@ -1179,11 +1202,7 @@ class ZASK_Compliance_Engine {
         
         $result = wp_mail($email, $subject, $message, $headers);
         
-        if ($result) {
-            error_log('ZASK: Temp password email sent to ' . $email);
-        } else {
-            error_log('ZASK: Temp password email FAILED for ' . $email);
-        }
+        $this->debug_log('Temp password email to ' . $email . ': ' . ($result ? 'OK' : 'FAILED'));
         
         return $result;
     }
@@ -1343,17 +1362,51 @@ class ZASK_Compliance_Engine {
     private function log_verification($data) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'zask_compliance_records';
-        
+
+        // Generate a reliable session ID without requiring PHP sessions
+        // (many hosts disable session_start() or it conflicts with page cache)
+        $session_id = '';
+        if (isset($_COOKIE['zask_session_id'])) {
+            $session_id = sanitize_text_field($_COOKIE['zask_session_id']);
+        } else {
+            $session_id = 'zask_' . bin2hex(random_bytes(16));
+            setcookie('zask_session_id', $session_id, 0, '/', '', is_ssl(), true);
+        }
+
         $defaults = array(
-            'session_id' => session_id() ?: uniqid('zask_', true),
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
-            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'session_id' => $session_id,
+            'ip_address' => $this->get_client_ip(),
+            'user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500),
             'created_at' => current_time('mysql'),
         );
-        
+
         $data = array_merge($defaults, $data);
-        
+
         $wpdb->insert($table_name, $data);
+
+        if ($wpdb->last_error) {
+            $this->debug_log('log_verification DB error: ' . $wpdb->last_error);
+        }
+    }
+
+    /**
+     * Get the real client IP, handling proxies and CDNs.
+     */
+    private function get_client_ip() {
+        $headers = array('HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'REMOTE_ADDR');
+        foreach ($headers as $header) {
+            if (!empty($_SERVER[$header])) {
+                $ip = $_SERVER[$header];
+                // X-Forwarded-For can contain multiple IPs — take the first
+                if (strpos($ip, ',') !== false) {
+                    $ip = trim(explode(',', $ip)[0]);
+                }
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return $ip;
+                }
+            }
+        }
+        return $_SERVER['REMOTE_ADDR'] ?? '';
     }
     
     /**

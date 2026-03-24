@@ -320,12 +320,26 @@ $license_tier = ZASK_License::get_tier();
                                 <p><?php _e('For high-compliance sites, enable "Logout on Browser Close" to ensure users re-verify each browsing session.', 'zask-age-gate'); ?></p>
                             </div>
                         </div>
+
+                        <div class="zask-toggle-field" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                            <label class="zask-switch">
+                                <input type="checkbox" name="zask_agegate_debug" <?php checked(get_option('zask_agegate_debug'), '1'); ?>>
+                                <span class="zask-switch-slider"></span>
+                            </label>
+                            <div class="zask-toggle-label">
+                                <strong><?php _e('Debug Logging', 'zask-age-gate'); ?></strong>
+                                <p><?php _e('Writes detailed cookie/verification logs to wp-content/zask-age-gate-debug.log. Disable after troubleshooting.', 'zask-age-gate'); ?></p>
+                                <?php if (file_exists(WP_CONTENT_DIR . '/zask-age-gate-debug.log')): ?>
+                                    <p><small><strong><?php _e('Log file exists:', 'zask-age-gate'); ?></strong> wp-content/zask-age-gate-debug.log (<?php echo size_format(filesize(WP_CONTENT_DIR . '/zask-age-gate-debug.log')); ?>)</small></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
+
             </div>
         </div>
-        
+
         <!-- Geographic Compliance Tab -->
         <div class="zask-tab-content" data-tab="geo">
             <div class="zask-settings-grid">
